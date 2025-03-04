@@ -74,7 +74,9 @@ function Dashboard() {
             onClick={() => setMobileMenuOpen(true)}
             className="mr-3 md:hidden"
           />
-          <h1 className="text-lg md:text-xl font-bold">Restaurant Dashboard</h1>
+          <h1 className="text-lg md:text-xl font-bold">
+            Abdi Logaw Restaurant
+          </h1>
         </div>
       </Header>
 
