@@ -9,16 +9,39 @@ import {
   message,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 function FoodManagement() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [editingFood, setEditingFood] = useState(null);
-  const [foods, setFoods] = useState([
-    { id: 1, name: "Pizza", price: 10.99, description: "Delicious pizza" },
-    { id: 2, name: "Burger", price: 8.99, description: "Juicy burger" },
-  ]);
+  const [foods, setFoods] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch foods from backend
+  const fetchFoods = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/foods`,
+        {
+          headers: { Authorization: token },
+        }
+      );
+      setFoods(response.data);
+    } catch (error) {
+      console.error("Fetch error:", error);
+      message.error("Failed to fetch foods");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFoods();
+  }, []);
 
   const columns = [
     {
@@ -67,28 +90,60 @@ function FoodManagement() {
 
   const handleDelete = (food) => {
     Modal.confirm({
-      title: "Are you sure you want to delete this food item?",
-      onOk: () => {
-        setFoods(foods.filter((f) => f.id !== food.id));
-        message.success("Food deleted successfully");
+      title: "Delete Food Item",
+      content: `Are you sure you want to delete "${food.name}"?`,
+      okText: "Yes",
+      okType: "danger",
+      cancelText: "No",
+      onOk: async () => {
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(
+            `${import.meta.env.VITE_API_URL}/api/foods/${food._id}`,
+            {
+              headers: { Authorization: `${token}` },
+            }
+          );
+          message.success("Food deleted successfully");
+          fetchFoods(); // Refresh the list
+        } catch (error) {
+          console.error("Delete error:", error);
+          message.error(error.response?.data || "Failed to delete food");
+        }
       },
     });
   };
 
   const handleModalOk = () => {
-    form.validateFields().then((values) => {
-      if (editingFood) {
-        setFoods(
-          foods.map((f) =>
-            f.id === editingFood.id ? { ...values, id: editingFood.id } : f
-          )
-        );
-        message.success("Food updated successfully");
-      } else {
-        setFoods([...foods, { ...values, id: foods.length + 1 }]);
-        message.success("Food added successfully");
+    form.validateFields().then(async (values) => {
+      try {
+        const token = localStorage.getItem("token");
+        if (editingFood) {
+          // Update existing food
+          await axios.put(
+            `${import.meta.env.VITE_API_URL}/api/foods/${editingFood._id}`,
+            values,
+            {
+              headers: { Authorization: token },
+            }
+          );
+          message.success("Food updated successfully");
+        } else {
+          // Create new food
+          await axios.post(
+            `${import.meta.env.VITE_API_URL}/api/foods`,
+            values,
+            {
+              headers: { Authorization: token },
+            }
+          );
+          message.success("Food added successfully");
+        }
+        setIsModalVisible(false);
+        fetchFoods(); // Refresh the list
+      } catch (error) {
+        message.error(error.response?.data || "Failed to save food");
       }
-      setIsModalVisible(false);
     });
   };
 
@@ -100,7 +155,12 @@ function FoodManagement() {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={foods} rowKey="id" />
+      <Table
+        columns={columns}
+        dataSource={foods}
+        rowKey="_id"
+        loading={loading}
+      />
 
       <Modal
         title={editingFood ? "Edit Food" : "Add Food"}

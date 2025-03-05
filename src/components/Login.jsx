@@ -1,12 +1,32 @@
 import { Form, Input, Button, Card, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import axios from "axios";
 
 function Login() {
-  const onFinish = (values) => {
-    // Handle login logic here
-    console.log("Received values:", values);
-    // Temporary: just redirect to dashboard
-    window.location.href = "/dashboard";
+  const onFinish = async (values) => {
+    try {
+      console.log("Login attempt:", values);
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/users/login`,
+        {
+          username: values.username,
+          password: values.password,
+        }
+      );
+
+      // Store the token in localStorage
+      const token = response.data.token;
+      localStorage.setItem("token", token);
+
+      // Show success message
+      message.success("Login successful!");
+
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
+    } catch (error) {
+      // Show error message
+      message.error(error.response?.data || "Login failed");
+    }
   };
 
   return (
@@ -44,6 +64,12 @@ function Login() {
               Log in
             </Button>
           </Form.Item>
+          <div className="text-center">
+            Don't have an account?{" "}
+            <a href="/register" className="text-blue-600 hover:text-blue-800">
+              Register here
+            </a>
+          </div>
         </Form>
       </Card>
     </div>

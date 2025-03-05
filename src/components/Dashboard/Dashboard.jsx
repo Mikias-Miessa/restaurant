@@ -6,6 +6,7 @@ import {
   OrderedListOutlined,
   UserOutlined,
   MenuOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import FoodManagement from "./FoodManagement";
 import OrderManagement from "./OrderManagement";
@@ -47,19 +48,38 @@ function Dashboard() {
     setMobileMenuOpen(false);
   };
 
+  const handleLogout = () => {
+    // Clear the token from localStorage
+    localStorage.removeItem("token");
+    // Redirect to login page
+    window.location.href = "/login";
+  };
+
   // Responsive sidebar toggle
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
   };
 
   const SideMenu = () => (
-    <Menu
-      mode="inline"
-      selectedKeys={[getCurrentMenuKey()]}
-      style={{ height: "100%", borderRight: 0 }}
-      items={menuItems}
-      onClick={handleMenuClick}
-    />
+    <div className="h-full flex flex-col">
+      <Menu
+        mode="inline"
+        selectedKeys={[getCurrentMenuKey()]}
+        style={{ height: "100%", borderRight: 0 }}
+        items={menuItems}
+        onClick={handleMenuClick}
+      />
+      {/* Logout Button */}
+      <Button
+        type="text"
+        danger
+        icon={<LogoutOutlined />}
+        onClick={handleLogout}
+        className="mt-auto mb-4 mx-4"
+      >
+        Logout
+      </Button>
+    </div>
   );
 
   return (

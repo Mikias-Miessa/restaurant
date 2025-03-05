@@ -1,6 +1,16 @@
-import { useState } from "react";
-import { Card, Form, Input, Button, Divider, Avatar, Typography } from "antd";
+import { useState, useEffect } from "react";
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  Divider,
+  Avatar,
+  Typography,
+  message,
+} from "antd";
 import { UserOutlined, LockOutlined, EditOutlined } from "@ant-design/icons";
+import axios from "axios";
 
 const { Title, Text } = Typography;
 
@@ -8,19 +18,49 @@ function ProfileManagement() {
   const [usernameForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
 
-  // Mock user data (in real app, this would come from your auth context/state)
-  const [userData] = useState({
-    username: "current_user",
-    email: "user@example.com",
-    role: "Administrator",
-  });
+  // Fetch user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/users/profile`,
+          {
+            headers: { Authorization: token },
+          }
+        );
+        setUserData(response.data);
+      } catch (error) {
+        message.error("Failed to fetch user data");
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const handleUsernameUpdate = async (values) => {
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/users/update`,
+        {
+          username: values.newUsername,
+          currentUsername: values.currentUsername,
+        },
+        {
+          headers: { Authorization: token },
+        }
+      );
+
+      message.success("Username updated successfully");
+      // Update local user data
+      setUserData((prev) => ({ ...prev, username: values.newUsername }));
       usernameForm.resetFields();
+    } catch (error) {
+      message.error(error.response?.data || "Failed to update username");
     } finally {
       setLoading(false);
     }
@@ -29,12 +69,30 @@ function ProfileManagement() {
   const handlePasswordUpdate = async (values) => {
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/users/update`,
+        {
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+        },
+        {
+          headers: { Authorization: token },
+        }
+      );
+
+      message.success("Password updated successfully");
       passwordForm.resetFields();
+    } catch (error) {
+      message.error(error.response?.data || "Failed to update password");
     } finally {
       setLoading(false);
     }
   };
+
+  if (!userData) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -46,9 +104,6 @@ function ProfileManagement() {
               {userData.username}
             </Title>
             <Text type="secondary">{userData.role}</Text>
-            <div className="mt-2">
-              <Text type="secondary">{userData.email}</Text>
-            </div>
           </div>
         </div>
       </Card>

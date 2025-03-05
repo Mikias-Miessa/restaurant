@@ -1,46 +1,51 @@
-import { useState, useEffect, useRef } from "react";
-import {
-  Button,
-  Card,
-  Modal,
-  Typography,
-  Divider,
-  Badge,
-  Input,
-  Radio,
-} from "antd";
-import {
-  ShoppingCartOutlined,
-  PlusOutlined,
-  MinusOutlined,
-} from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
+import { Button, Modal, Typography, Divider, Badge, message } from "antd";
+import { ShoppingCartOutlined } from "@ant-design/icons";
+import axios from "axios";
+import MenuItem from "../MenuItem"; // Adjust the import path as necessary
 
 const { Title, Text } = Typography;
 
 function OrderManagement() {
-  const [foods] = useState([
-    { id: 1, name: "Pizza Margherita", price: 10.99 },
-    { id: 2, name: "Cheeseburger", price: 8.99 },
-    { id: 3, name: "Caesar Salad", price: 6.99 },
-    { id: 4, name: "Pasta Carbonara", price: 12.99 },
-    { id: 5, name: "Greek Salad", price: 7.99 },
-    { id: 6, name: "Chicken Wings", price: 9.99 },
-  ]);
-
+  const [foods, setFoods] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState([]);
   const [isReceiptModalVisible, setIsReceiptModalVisible] = useState(false);
 
+  // Fetch foods from backend
+  useEffect(() => {
+    const fetchFoods = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/foods`,
+          {
+            headers: { Authorization: token },
+          }
+        );
+        setFoods(response.data);
+      } catch (error) {
+        message.error("Failed to fetch menu items");
+        console.error("Error fetching foods:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFoods();
+  }, []);
+
   const handleQuantityChange = (food, quantity) => {
     if (quantity === 0) {
-      setSelectedItems(selectedItems.filter((item) => item.id !== food.id));
+      setSelectedItems(selectedItems.filter((item) => item._id !== food._id));
       return;
     }
 
-    const existingItem = selectedItems.find((item) => item.id === food.id);
+    const existingItem = selectedItems.find((item) => item._id === food._id);
     if (existingItem) {
       setSelectedItems(
         selectedItems.map((item) =>
-          item.id === food.id ? { ...item, quantity } : item
+          item._id === food._id ? { ...item, quantity } : item
         )
       );
     } else {
@@ -59,7 +64,7 @@ function OrderManagement() {
   const updatePrepNote = (foodId, note) => {
     setSelectedItems(
       selectedItems.map((item) =>
-        item.id === foodId ? { ...item, prepNote: note } : item
+        item._id === foodId ? { ...item, prepNote: note } : item
       )
     );
   };
@@ -67,13 +72,13 @@ function OrderManagement() {
   const updateOrderType = (foodId, type) => {
     setSelectedItems(
       selectedItems.map((item) =>
-        item.id === foodId ? { ...item, orderType: type } : item
+        item._id === foodId ? { ...item, orderType: type } : item
       )
     );
   };
 
   const getItemQuantity = (foodId) => {
-    const item = selectedItems.find((item) => item.id === foodId);
+    const item = selectedItems.find((item) => item._id === foodId);
     return item ? item.quantity : 0;
   };
 
@@ -81,90 +86,6 @@ function OrderManagement() {
     return selectedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
-    );
-  };
-
-  const MenuItem = ({ food }) => {
-    const quantity = getItemQuantity(food.id);
-    const item = selectedItems.find((item) => item.id === food.id);
-    const [localPrepNote, setLocalPrepNote] = useState("");
-    const inputRef = useRef(null); // Add a ref for the Input.TextArea
-
-    useEffect(() => {
-      if (item) {
-        setLocalPrepNote(item.prepNote || "");
-      }
-    }, [item]);
-
-    useEffect(() => {
-      if (inputRef.current) {
-        inputRef.current.focus(); // Set focus back to the input field after each render
-      }
-    }, [localPrepNote]); // Re-run this effect whenever localPrepNote changes
-
-    const handlePrepNoteChange = (e) => {
-      const newValue = e.target.value;
-      setLocalPrepNote(newValue);
-      updatePrepNote(food.id, newValue);
-    };
-
-    return (
-      <div className="flex flex-col p-3 md:p-4 border-b border-gray-100 hover:bg-gray-50">
-        <div className="flex items-center justify-between">
-          <div>
-            <Text strong className="text-base md:text-lg block">
-              {food.name}
-            </Text>
-          </div>
-          <div className="flex items-center space-x-2 md:space-x-3">
-            <Button
-              type={quantity > 0 ? "primary" : "default"}
-              icon={<MinusOutlined />}
-              onClick={() =>
-                handleQuantityChange(food, Math.max(0, quantity - 1))
-              }
-              className="flex items-center justify-center"
-              size="small"
-            />
-            <Text
-              strong
-              className="w-6 md:w-8 text-center text-base md:text-lg"
-            >
-              {quantity}
-            </Text>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleQuantityChange(food, quantity + 1)}
-              className="flex items-center justify-center"
-              size="small"
-            />
-          </div>
-        </div>
-        {quantity > 0 && (
-          <div className="mt-2 space-y-2">
-            <Input.TextArea
-              ref={inputRef} // Attach the ref to the Input.TextArea
-              placeholder="Special preparation instructions"
-              value={localPrepNote}
-              onChange={handlePrepNoteChange}
-              autoSize={{ minRows: 1, maxRows: 3 }}
-            />
-            <Radio.Group
-              value={item?.orderType || "dine-in"}
-              onChange={(e) => updateOrderType(food.id, e.target.value)}
-              className="w-full"
-            >
-              <Radio.Button value="dine-in" className="w-1/2 text-center">
-                Dine In
-              </Radio.Button>
-              <Radio.Button value="takeaway" className="w-1/2 text-center">
-                Takeaway
-              </Radio.Button>
-            </Radio.Group>
-          </div>
-        )}
-      </div>
     );
   };
 
@@ -188,7 +109,7 @@ function OrderManagement() {
 
         <div className="space-y-4">
           {selectedItems.map((item) => (
-            <div key={item.id} className="border-b pb-2">
+            <div key={`receipt-${item._id}`} className="border-b pb-2">
               <div className="flex justify-between items-start">
                 <Text className="text-xl font-bold">{item.name}</Text>
                 <Badge
@@ -250,7 +171,7 @@ function OrderManagement() {
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-lg shadow-sm">
               {selectedItems.map((item) => (
-                <div key={item.id} className="mb-3 pb-3 border-b">
+                <div key={`summary-${item._id}`} className="mb-3 pb-3 border-b">
                   <div className="flex justify-between items-start">
                     <div>
                       <Text strong>{item.name}</Text>
@@ -320,9 +241,23 @@ function OrderManagement() {
           )}
         </div>
         <div className="bg-white rounded-lg shadow-sm">
-          {foods.map((food) => (
-            <MenuItem key={food.id} food={food} />
-          ))}
+          {loading ? (
+            <div className="p-4 text-center">Loading menu items...</div>
+          ) : foods.length === 0 ? (
+            <div className="p-4 text-center">No menu items available</div>
+          ) : (
+            foods.map((food) => (
+              <MenuItem
+                key={food._id}
+                food={food}
+                selectedItems={selectedItems}
+                handleQuantityChange={handleQuantityChange}
+                updatePrepNote={updatePrepNote}
+                updateOrderType={updateOrderType}
+                getItemQuantity={getItemQuantity}
+              />
+            ))
+          )}
         </div>
       </div>
 
