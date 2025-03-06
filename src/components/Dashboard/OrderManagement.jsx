@@ -11,6 +11,7 @@ function OrderManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState([]);
   const [isReceiptModalVisible, setIsReceiptModalVisible] = useState(false);
+  const [orderDestination, setOrderDestination] = useState("kitchen");
 
   // Fetch foods from backend
   useEffect(() => {
@@ -89,15 +90,70 @@ function OrderManagement() {
     );
   };
 
+  const handlePrint = () => {
+    const printContent = document.getElementById("receipt-content");
+    const windowPrint = window.open("", "", "width=300,height=600");
+
+    windowPrint.document.write(`
+      <html>
+        <head>
+          <title>Print Receipt</title>
+          <style>
+            @page {
+              size: 80mm 297mm;  /* Standard thermal receipt width */
+              margin: 0;
+            }
+            body {
+              width: 80mm;
+              font-family: monospace;
+              margin: 0;
+              padding: 8px;
+            }
+            /* Preserve existing styles */
+            .text-center { text-align: center; }
+            .mb-1 { margin-bottom: 0.25rem; }
+            .mb-4 { margin-bottom: 1rem; }
+            .block { display: block; }
+            .font-bold { font-weight: bold; }
+            .text-lg { font-size: 1.125rem; }
+            .text-xl { font-size: 1.25rem; }
+            .text-gray-600 { color: #4B5563; }
+            .text-gray-500 { color: #6B7280; }
+            .text-xs { font-size: 0.75rem; }
+            .border-b { border-bottom: 1px solid #E5E7EB; }
+            .pb-2 { padding-bottom: 0.5rem; }
+            .space-y-4 > * + * { margin-top: 1rem; }
+            .my-2 { margin: 0.5rem 0; }
+            .my-4 { margin: 1rem 0; }
+            .mt-4 { margin-top: 1rem; }
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .items-start { align-items: flex-start; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+
+    windowPrint.document.close();
+    windowPrint.focus();
+    setTimeout(() => {
+      windowPrint.print();
+      windowPrint.close();
+    }, 250);
+  };
+
   const Receipt = () => {
     const currentDate = new Date().toLocaleString();
     const orderNumber = Math.floor(Math.random() * 1000000);
 
     return (
-      <div className="bg-white p-4 md:p-6 font-mono">
+      <div id="receipt-content" className="bg-white p-4 md:p-6 font-mono">
         <div className="text-center mb-4 md:mb-6">
           <Title level={3} className="mb-1">
-            KITCHEN ORDER
+            {orderDestination.toUpperCase()} ORDER
           </Title>
           <Text className="font-bold text-lg block">
             Order #: {orderNumber}
@@ -206,7 +262,7 @@ function OrderManagement() {
               onClick={() => setIsReceiptModalVisible(true)}
               className="hidden lg:flex items-center justify-center"
             >
-              Send to Kitchen
+              Send
             </Button>
           </div>
         )}
@@ -265,12 +321,51 @@ function OrderManagement() {
       <OrderSummary />
 
       <Modal
-        title="Kitchen Order"
+        title={`${
+          orderDestination.charAt(0).toUpperCase() + orderDestination.slice(1)
+        } Order`}
         open={isReceiptModalVisible}
-        onOk={() => setIsReceiptModalVisible(false)}
+        onOk={() => {
+          handlePrint();
+          setIsReceiptModalVisible(false);
+        }}
         onCancel={() => setIsReceiptModalVisible(false)}
         width={window.innerWidth < 768 ? "90%" : 400}
         centered
+        footer={[
+          <div key="footer" className="flex flex-col gap-2">
+            <div className="flex justify-center mb-2">
+              <Button.Group>
+                <Button
+                  type={orderDestination === "kitchen" ? "primary" : "default"}
+                  onClick={() => setOrderDestination("kitchen")}
+                >
+                  Kitchen
+                </Button>
+                <Button
+                  type={orderDestination === "butcher" ? "primary" : "default"}
+                  onClick={() => setOrderDestination("butcher")}
+                >
+                  Butcher
+                </Button>
+              </Button.Group>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button onClick={() => setIsReceiptModalVisible(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="primary"
+                onClick={() => {
+                  handlePrint();
+                  setIsReceiptModalVisible(false);
+                }}
+              >
+                Print & Send
+              </Button>
+            </div>
+          </div>,
+        ]}
       >
         <Receipt />
       </Modal>
