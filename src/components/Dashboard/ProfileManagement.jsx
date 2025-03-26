@@ -45,10 +45,9 @@ function ProfileManagement() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/users/update`,
+        `${import.meta.env.VITE_API_URL}/api/users/profile`,
         {
           username: values.newUsername,
-          currentUsername: values.currentUsername,
         },
         {
           headers: { Authorization: token },
@@ -56,7 +55,6 @@ function ProfileManagement() {
       );
 
       message.success("Username updated successfully");
-      // Update local user data
       setUserData((prev) => ({ ...prev, username: values.newUsername }));
       usernameForm.resetFields();
     } catch (error) {
@@ -71,7 +69,7 @@ function ProfileManagement() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/users/update`,
+        `${import.meta.env.VITE_API_URL}/api/users/profile`,
         {
           currentPassword: values.currentPassword,
           newPassword: values.newPassword,
