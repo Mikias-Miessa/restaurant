@@ -1,31 +1,37 @@
 import { Form, Input, Button, Card, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 function Login() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
   const onFinish = async (values) => {
     try {
-      console.log("Login attempt:", values);
+      setLoading(true);
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/users/login`,
-        {
-          username: values.username,
-          password: values.password,
-        }
+        values
       );
 
-      // Store the token in localStorage
-      const token = response.data.token;
+      const { token, role, username } = response.data;
+
+      // Store all user data
       localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+      localStorage.setItem("username", username); // Make sure username is stored
 
-      // Show success message
+      console.log("Stored username:", username); // Debug log
+
       message.success("Login successful!");
-
-      // Redirect to dashboard
-      window.location.href = "/dashboard";
+      navigate("/dashboard");
     } catch (error) {
-      // Show error message
-      message.error(error.response?.data || "Login failed");
+      console.error("Login error:", error);
+      message.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,6 +66,7 @@ function Login() {
               htmlType="submit"
               className="w-full"
               size="large"
+              loading={loading}
             >
               Log in
             </Button>

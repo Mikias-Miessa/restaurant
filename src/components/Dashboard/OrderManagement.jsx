@@ -3,6 +3,7 @@ import { Button, Modal, Typography, Divider, Badge, message } from "antd";
 import { ShoppingCartOutlined } from "@ant-design/icons";
 import axios from "axios";
 import MenuItem from "../MenuItem"; // Adjust the import path as necessary
+import { socket } from "../../socket";
 
 const { Title, Text } = Typography;
 
@@ -12,6 +13,7 @@ function OrderManagement() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [isReceiptModalVisible, setIsReceiptModalVisible] = useState(false);
   const [orderDestination, setOrderDestination] = useState("kitchen");
+  const userRole = localStorage.getItem("role");
 
   // Fetch foods from backend
   useEffect(() => {
@@ -90,6 +92,36 @@ function OrderManagement() {
     );
   };
 
+  const handleSendOrder = () => {
+    if (selectedItems.length === 0) {
+      message.error("Please select items to order");
+      return;
+    }
+
+    const username = localStorage.getItem("username");
+    console.log("Current username:", username); // Debug log
+
+    const orderData = {
+      orderNumber: Math.floor(Math.random() * 1000000),
+      timestamp: new Date(),
+      items: selectedItems,
+      destination: orderDestination,
+      waiterName: username || "Unknown",
+    };
+
+    console.log("Order data being sent:", orderData); // Debug log
+
+    if (userRole === "waiter") {
+      socket.emit("new-order", orderData);
+      message.success("Order sent to admin successfully!");
+    } else {
+      handlePrint();
+    }
+
+    setSelectedItems([]);
+    setIsReceiptModalVisible(false);
+  };
+
   const handlePrint = () => {
     const printContent = document.getElementById("receipt-content");
     const windowPrint = window.open("", "", "width=300,height=600");
@@ -99,17 +131,13 @@ function OrderManagement() {
         <head>
           <title>Print Receipt</title>
           <style>
-            @page {
-              size: 80mm 297mm;  /* Standard thermal receipt width */
-              margin: 0;
-            }
-            body {
+            @page { size: 80mm 297mm; margin: 0; }
+            body { 
               width: 80mm;
               font-family: monospace;
               margin: 0;
               padding: 8px;
             }
-            /* Preserve existing styles */
             .text-center { text-align: center; }
             .mb-1 { margin-bottom: 0.25rem; }
             .mb-4 { margin-bottom: 1rem; }
@@ -325,10 +353,6 @@ function OrderManagement() {
           orderDestination.charAt(0).toUpperCase() + orderDestination.slice(1)
         } Order`}
         open={isReceiptModalVisible}
-        onOk={() => {
-          handlePrint();
-          setIsReceiptModalVisible(false);
-        }}
         onCancel={() => setIsReceiptModalVisible(false)}
         width={window.innerWidth < 768 ? "90%" : 400}
         centered
@@ -354,14 +378,8 @@ function OrderManagement() {
               <Button onClick={() => setIsReceiptModalVisible(false)}>
                 Cancel
               </Button>
-              <Button
-                type="primary"
-                onClick={() => {
-                  handlePrint();
-                  setIsReceiptModalVisible(false);
-                }}
-              >
-                Print & Send
+              <Button type="primary" onClick={handleSendOrder}>
+                {userRole === "waiter" ? "Send Order" : "Print & Send"}
               </Button>
             </div>
           </div>,
